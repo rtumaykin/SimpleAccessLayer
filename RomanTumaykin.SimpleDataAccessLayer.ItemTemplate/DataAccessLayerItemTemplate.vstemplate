@@ -1,0 +1,49 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<VSTemplate Version="3.0.0" Type="Item" xmlns="http://schemas.microsoft.com/developer/vstemplate/2005" xmlns:sdk="http://schemas.microsoft.com/developer/vstemplate-sdkextension/2010">
+  <TemplateData>
+    <Name>Simple Data Access Layer</Name>
+    <Description>Simple Data Access Layer C# Project Item</Description>
+    <Icon>DataAccessLayerItemTemplate.ico</Icon>
+    <TemplateID>3fa29adb-8e62-4bbe-9402-cce638eb6291</TemplateID>
+    <ProjectType>CSharp</ProjectType>
+    <ProjectSubType>Database</ProjectSubType>
+    <RequiredFrameworkVersion>4.0</RequiredFrameworkVersion>
+    <NumberOfParentCategoriesToRollUp>1</NumberOfParentCategoriesToRollUp>
+    <DefaultName>DataAccessLayer.dal</DefaultName>
+  </TemplateData>
+  <TemplateContent>
+    <References>
+      <Reference>
+        <Assembly>System</Assembly>
+      </Reference>
+      <Reference>
+        <Assembly>System.Configuration</Assembly>
+      </Reference>
+      <Reference>
+        <Assembly>System.Data</Assembly>
+      </Reference>
+      <Reference>
+        <Assembly>System.Xml</Assembly>
+      </Reference>
+      <Reference>
+        <Assembly>System.Xml.Linq</Assembly>
+      </Reference>
+    </References>
+    <ProjectItem ItemType="Form" ReplaceParameters="true" TargetFileName="$fileinputname$.dal">DataAccessLayer.dal</ProjectItem>
+    <ProjectItem ReplaceParameters="true" TargetFileName="$fileinputname_randomized$.tt">DataAccessLayer.tt</ProjectItem>
+  </TemplateContent>
+  <WizardExtension>
+    <Assembly>RomanTumaykin.SimpleDataAccessLayer.ItemTemplate.DeploymentWizard, Version=4.5.0.0, Culture=Neutral, PublicKeyToken=50a29d640e938d56</Assembly>
+    <FullClassName>RomanTumaykin.SimpleDataAccessLayer.ItemTemplate.DeploymentWizard.AddItemWizard</FullClassName>
+  </WizardExtension>
+<!--  <WizardExtension>
+    <Assembly>NuGet.VisualStudio.Interop, Version=1.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</Assembly>
+    <FullClassName>NuGet.VisualStudio.TemplateWizard</FullClassName>
+  </WizardExtension>
+  <WizardData>
+    <packages repository="extension"  repositoryId="17a55fbc-34a2-45ed-b9f6-8ce882621048">
+      <package id="SimpleDataAccessLayerComponents" version="1.0.0" />
+    </packages>
+  </WizardData>
+-->
+</VSTemplate>
