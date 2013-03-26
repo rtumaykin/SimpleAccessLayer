@@ -231,7 +231,7 @@ namespace <#= _helper.Config.Namespace + ".Executables." + _currentNamespace #>
 		{
 			<#= Tools.CleanName(_procedure.ProcedureName) #> _retValue = new <#= Tools.CleanName(_procedure.ProcedureName) #>();
 
-			// Instead of using a "using" statement I will need to do it differently because now the Connectiuon object may be passed in
+			// Instead of using a "using" statement I will need to do it differently because now the Connection object may be passed in
 			{
 				global::System.Data.SqlClient.SqlConnection _conn = executionScope == null ? new global::System.Data.SqlClient.SqlConnection(global::<#= _helper.Config.Namespace #>.ExecutionScope.ConnectionString) : executionScope.Transaction.Connection;
 				try
@@ -380,10 +380,13 @@ namespace <#= _helper.Config.Namespace + ".Enums." + _currentNamespace #>
 	}
 <#
 		}
+		// Close the namespaces only if there is at least one enum
+		if(!_firstNamespace)
+		{
 #>
 }
-
 <#
+		}
 	}
 }
 catch (Exception e)
