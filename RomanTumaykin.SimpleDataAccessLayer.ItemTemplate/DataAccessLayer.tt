@@ -27,6 +27,11 @@ namespace <#= _helper.Config.Namespace #>
 {
 	public class ExecutionScope : global::System.IDisposable
 	{
+		private static global::System.Collections.Generic.List<int> retryableErrors = new global::System.Collections.Generic.List<int> 
+		{
+			53, 601, 615, 913, 921, 922, 923, 924, 926, 927, 941, 955, 956, 983, 976, 978, 979, 982, 983, 1204, 1205, 1214, 1222, 1428, 35201
+		};
+		
 		private global::System.Data.SqlClient.SqlTransaction transaction;
 		public global::System.Data.SqlClient.SqlTransaction Transaction
 		{
@@ -41,6 +46,7 @@ namespace <#= _helper.Config.Namespace #>
 		public ExecutionScope()
 		{
 			this.connection = new global::System.Data.SqlClient.SqlConnection(ConnectionString);
+			this.connection.Open();
 			this.transaction = connection.BeginTransaction();
 		}
 
@@ -83,8 +89,191 @@ namespace <#= _helper.Config.Namespace #>
 				);
 				return connectionString;
 			}
+			set
+			{
+				connectionString = value;
+			}
 		}
+		internal async static System.Threading.Tasks.Task<global::System.Int32> ExecuteNonQueryAsync(global::System.Data.SqlClient.SqlCommand cmd, ExecutionScope executionScope)
+		{
+			// Instead of using a "using" statement I will need to do it differently because now the Connection object may be passed in
+			{
+				int _retryCycle = 0;
 
+				while (true)
+				{
+					global::System.Data.SqlClient.SqlConnection _conn = executionScope == null ? new global::System.Data.SqlClient.SqlConnection(global::MarkedUp.Data.MSSQL.Customer.AccessLayer.ExecutionScope.ConnectionString) : executionScope.Transaction.Connection;
+					try
+					{
+						if (_conn.State != System.Data.ConnectionState.Open)
+						{
+							if (executionScope == null)
+							{
+								await _conn.OpenAsync();
+							}
+							else
+							{
+								// no need to cycle more
+								_retryCycle = 1000;
+								throw new global::System.Exception("Execution Scope must have an open connection.");
+							}
+						}
+						cmd.Connection = _conn;
+						return await cmd.ExecuteNonQueryAsync();
+					}
+					catch (global::System.Data.SqlClient.SqlException e)
+					{
+						// Retry up to 10 times with 1 second delay - then only throw
+						if (_retryCycle++ > 9 || !retryableErrors.Contains(e.Number))
+							throw;
+						global::System.Threading.Thread.Sleep(1000);
+						System.Diagnostics.Debug.WriteLine(string.Format("Executed {0}; ", cmd.CommandText) + e.Message + string.Format(" @ {0}", global::System.DateTime.Now.ToString("MM/dd/yyyy hh:mm:ss")));
+					}
+					finally // cleanup - start fresh every time
+					{
+						if (executionScope == null && _conn != null)
+						{
+							((global::System.IDisposable) _conn).Dispose();
+						}
+					}
+				}
+			}
+		}
+		internal static global::System.Int32 ExecuteNonQuery(global::System.Data.SqlClient.SqlCommand cmd, ExecutionScope executionScope)
+		{
+			// Instead of using a "using" statement I will need to do it differently because now the Connection object may be passed in
+			{
+				int _retryCycle = 0;
+
+				while (true)
+				{
+					global::System.Data.SqlClient.SqlConnection _conn = executionScope == null ? new global::System.Data.SqlClient.SqlConnection(global::MarkedUp.Data.MSSQL.Customer.AccessLayer.ExecutionScope.ConnectionString) : executionScope.Transaction.Connection;
+					try
+					{
+						if (_conn.State != System.Data.ConnectionState.Open)
+						{
+							if (executionScope == null)
+							{
+								_conn.Open();
+							}
+							else
+							{
+								// no need to cycle more
+								_retryCycle = 1000;
+								throw new global::System.Exception("Execution Scope must have an open connection.");
+							}
+						}
+						cmd.Connection = _conn;
+						return cmd.ExecuteNonQuery();
+					}
+					catch (global::System.Data.SqlClient.SqlException e)
+					{
+						// Retry up to 10 times with 1 second delay - then only throw
+						if (_retryCycle++ > 9 || !retryableErrors.Contains(e.Number))
+							throw;
+						global::System.Threading.Thread.Sleep(1000);
+						System.Diagnostics.Debug.WriteLine(string.Format("Executed {0}; ", cmd.CommandText) + e.Message + string.Format(" @ {0}", global::System.DateTime.Now.ToString("MM/dd/yyyy hh:mm:ss")));
+					}
+					finally // cleanup - start fresh every time
+					{
+						if (executionScope == null && _conn != null)
+						{
+							((global::System.IDisposable)_conn).Dispose();
+						}
+					}
+				}
+			}
+		}
+		internal async static global::System.Threading.Tasks.Task<global::System.Data.SqlClient.SqlDataReader> ExecuteReaderAsync(global::System.Data.SqlClient.SqlCommand cmd, ExecutionScope executionScope)
+		{
+			// Instead of using a "using" statement I will need to do it differently because now the Connection object may be passed in
+			{
+				int _retryCycle = 0;
+
+				while (true)
+				{
+					global::System.Data.SqlClient.SqlConnection _conn = executionScope == null ? new global::System.Data.SqlClient.SqlConnection(global::MarkedUp.Data.MSSQL.Customer.AccessLayer.ExecutionScope.ConnectionString) : executionScope.Transaction.Connection;
+					try
+					{
+						if (_conn.State != System.Data.ConnectionState.Open)
+						{
+							if (executionScope == null)
+							{
+								await _conn.OpenAsync();
+							}
+							else
+							{
+								// no need to cycle more
+								_retryCycle = 1000;
+								throw new global::System.Exception("Execution Scope must have an open connection.");
+							}
+						}
+						cmd.Connection = _conn;
+						return await cmd.ExecuteReaderAsync();
+					}
+					catch (global::System.Data.SqlClient.SqlException e)
+					{
+						// Retry up to 10 times with 1 second delay - then only throw
+						if (_retryCycle++ > 9 || !retryableErrors.Contains(e.Number))
+							throw;
+						global::System.Threading.Thread.Sleep(1000);
+						System.Diagnostics.Debug.WriteLine(string.Format("Executed {0}; ", cmd.CommandText) + e.Message + string.Format(" @ {0}", global::System.DateTime.Now.ToString("MM/dd/yyyy hh:mm:ss")));
+					}
+					finally // cleanup - start fresh every time
+					{
+						if (executionScope == null && _conn != null)
+						{
+							((global::System.IDisposable)_conn).Dispose();
+						}
+					}
+				}
+			}
+		}
+		internal static global::System.Data.SqlClient.SqlDataReader ExecuteReader(global::System.Data.SqlClient.SqlCommand cmd, ExecutionScope executionScope)
+		{
+			// Instead of using a "using" statement I will need to do it differently because now the Connection object may be passed in
+			{
+				int _retryCycle = 0;
+
+				while (true)
+				{
+					global::System.Data.SqlClient.SqlConnection _conn = executionScope == null ? new global::System.Data.SqlClient.SqlConnection(global::MarkedUp.Data.MSSQL.Customer.AccessLayer.ExecutionScope.ConnectionString) : executionScope.Transaction.Connection;
+					try
+					{
+						if (_conn.State != System.Data.ConnectionState.Open)
+						{
+							if (executionScope == null)
+							{
+								_conn.Open();
+							}
+							else
+							{
+								// no need to cycle more
+								_retryCycle = 1000;
+								throw new global::System.Exception("Execution Scope must have an open connection.");
+							}
+						}
+						cmd.Connection = _conn;
+						return cmd.ExecuteReader();
+					}
+					catch (global::System.Data.SqlClient.SqlException e)
+					{
+						// Retry up to 10 times with 1 second delay - then only throw
+						if (_retryCycle++ > 9 || !retryableErrors.Contains(e.Number))
+							throw;
+						global::System.Threading.Thread.Sleep(1000);
+						System.Diagnostics.Debug.WriteLine(string.Format("Executed {0}; ", cmd.CommandText) + e.Message + string.Format(" @ {0}", global::System.DateTime.Now.ToString("MM/dd/yyyy hh:mm:ss")));
+					}
+					finally // cleanup - start fresh every time
+					{
+						if (executionScope == null && _conn != null)
+						{
+							((global::System.IDisposable)_conn).Dispose();
+						}
+					}
+				}
+			}
+		}
 	}
 }
 <#
@@ -231,41 +420,35 @@ namespace <#= _helper.Config.Namespace + ".Executables." + _currentNamespace #>
 		{
 			<#= Tools.CleanName(_procedure.ProcedureName) #> _retValue = new <#= Tools.CleanName(_procedure.ProcedureName) #>();
 
-			// Instead of using a "using" statement I will need to do it differently because now the Connection object may be passed in
+			using (global::System.Data.SqlClient.SqlCommand _cmd = new global::System.Data.SqlClient.SqlCommand())
 			{
-				global::System.Data.SqlClient.SqlConnection _conn = executionScope == null ? new global::System.Data.SqlClient.SqlConnection(global::<#= _helper.Config.Namespace #>.ExecutionScope.ConnectionString) : executionScope.Transaction.Connection;
-				try
-				{
-					<#= _executeMethodId == 0 ? "await " : ""#>_conn.Open<#= _executeMethodId == 0 ? "Async" : ""#>();
-					using (global::System.Data.SqlClient.SqlCommand _cmd = _conn.CreateCommand())
-					{
-						_cmd.CommandType = global::System.Data.CommandType.StoredProcedure;
-						_cmd.CommandText = "<#= Tools.QuoteName(_procedure.Schema) + "." + Tools.QuoteName(_procedure.ProcedureName) #>";
+				_cmd.CommandType = global::System.Data.CommandType.StoredProcedure;
+				_cmd.CommandText = "<#= Tools.QuoteName(_procedure.Schema) + "." + Tools.QuoteName(_procedure.ProcedureName) #>";
 <#
 					foreach (var _param in parameterCollection)
 					{
 #>
-						_cmd.Parameters.Add(new global::System.Data.SqlClient.SqlParameter("<#= "@" + _param.ParameterName #>", global::System.Data.SqlDbType.<#= Tools.SqlDbTypeName(_param.SqlTypeName) #>, <#= ("nchar nvarchar".Split(new char[] {' '}).Contains(_param.SqlTypeName) && _param.MaxByteLength != -1) ? (_param.MaxByteLength / 2).ToString() : _param.MaxByteLength.ToString() #>, global::System.Data.ParameterDirection.<#= _param.IsOutputParameter ? "Output" : "Input" #>, true, <#= _param.Precision.ToString() #>, <#= _param.Scale.ToString() #>, null, global::System.Data.DataRowVersion.Default, <#= _param.ParameterName #>)<#
+				_cmd.Parameters.Add(new global::System.Data.SqlClient.SqlParameter("<#= "@" + _param.ParameterName #>", global::System.Data.SqlDbType.<#= Tools.SqlDbTypeName(_param.SqlTypeName) #>, <#= ("nchar nvarchar".Split(new char[] {' '}).Contains(_param.SqlTypeName) && _param.MaxByteLength != -1) ? (_param.MaxByteLength / 2).ToString() : _param.MaxByteLength.ToString() #>, global::System.Data.ParameterDirection.<#= _param.IsOutputParameter ? "Output" : "Input" #>, true, <#= _param.Precision.ToString() #>, <#= _param.Scale.ToString() #>, null, global::System.Data.DataRowVersion.Default, <#= _param.ParameterName #>)<#
 						if ("geography hierarchyid geometry".Split(new char[] {' '}).Contains(_param.SqlTypeName))
 						{
 #>{UdtTypeName = "<#= _param.SqlTypeName #>"}<#
 						}#> );
 	<#
 					}
-#>						_cmd.Parameters.Add(new global::System.Data.SqlClient.SqlParameter("@ReturnValue", global::System.Data.SqlDbType.Int, 4, global::System.Data.ParameterDirection.ReturnValue, true, 0, 0, null, global::System.Data.DataRowVersion.Default, global::System.DBNull.Value));
+#>				_cmd.Parameters.Add(new global::System.Data.SqlClient.SqlParameter("@ReturnValue", global::System.Data.SqlDbType.Int, 4, global::System.Data.ParameterDirection.ReturnValue, true, 0, 0, null, global::System.Data.DataRowVersion.Default, global::System.DBNull.Value));
 
 <#
 					if (columnsCollection.Count == 0)
 					{
 #>
-						<#= _executeMethodId == 0 ? "await " : ""#>_cmd.ExecuteNonQuery<#= _executeMethodId == 0 ? "Async" : ""#>();
+				<#= _executeMethodId == 0 ? "await " : ""#>ExecutionScope.ExecuteNonQuery<#= _executeMethodId == 0 ? "Async" : ""#>(_cmd, executionScope);
 <#
 					}
 					else // fill the result set with data
 					{
 #>
-						using (global::System.Data.SqlClient.SqlDataReader _reader = <#= _executeMethodId == 0 ? "await " : ""#>_cmd.ExecuteReader<#= _executeMethodId == 0 ? "Async" : ""#>())
-						{
+				using (global::System.Data.SqlClient.SqlDataReader _reader = <#= _executeMethodId == 0 ? "await " : ""#>ExecutionScope.ExecuteReader<#= _executeMethodId == 0 ? "Async" : ""#>(_cmd, executionScope))
+				{
 <#
 						int _recordsetIndex = 0;
 						foreach (List<ProcedureResultSetColumn> _recordset in columnsCollection)
@@ -273,13 +456,13 @@ namespace <#= _helper.Config.Namespace + ".Executables." + _currentNamespace #>
 							if (_recordsetIndex > 0)
 							{
 #>
-							if (<#= _executeMethodId == 0 ? "await " : ""#>_reader.NextResult<#= _executeMethodId == 0 ? "Async" : ""#>())
-							{
+					if (<#= _executeMethodId == 0 ? "await " : ""#>_reader.NextResult<#= _executeMethodId == 0 ? "Async" : ""#>())
+					{
 <#							}
 #>
-								while (<#= _executeMethodId == 0 ? "await " : ""#>_reader.Read<#= _executeMethodId == 0 ? "Async" : ""#>())
-								{
-									_retValue.Recordset<#= _recordsetIndex #>.Add(new Record<#= _recordsetIndex #>(<#
+						while (<#= _executeMethodId == 0 ? "await " : ""#>_reader.Read<#= _executeMethodId == 0 ? "Async" : ""#>())
+						{
+							_retValue.Recordset<#= _recordsetIndex #>.Add(new Record<#= _recordsetIndex #>(<#
 							int _columnOrdinal = 0;
 							foreach (var _column in _recordset)
 							{
@@ -292,34 +475,25 @@ namespace <#= _helper.Config.Namespace + ".Executables." + _currentNamespace #>
 								_columnOrdinal ++;
 							}
 #>));
-								}
+						}
 <#
 							if (_recordsetIndex > 0)
 							{
-#>							}
+#>					}
 <#							}
 							_recordsetIndex ++;
 						}
 #>
-						}
+				}
 <#					}
 					foreach (var _param in parameterCollection)
 					{
 #>
-						_retValue.parametersCollection.<#= _param.ParameterName #> = _cmd.Parameters["<#= "@" + _param.ParameterName #>"].Value == global::System.DBNull.Value ? null : (global::<#= _param.ClrTypeName #>)_cmd.Parameters["<#= "@" + _param.ParameterName #>"].Value;
+				_retValue.parametersCollection.<#= _param.ParameterName #> = _cmd.Parameters["<#= "@" + _param.ParameterName #>"].Value == global::System.DBNull.Value ? null : (global::<#= _param.ClrTypeName #>)_cmd.Parameters["<#= "@" + _param.ParameterName #>"].Value;
 <#
 					}
 #>
-						_retValue.returnValue = (global::System.Int32)_cmd.Parameters["@ReturnValue"].Value;
-					}
-				}
-				finally
-				{
-					if (executionScope == null && _conn != null)
-					{
-						((global::System.IDisposable)_conn).Dispose();
-					}
-				}
+				_retValue.returnValue = (global::System.Int32)_cmd.Parameters["@ReturnValue"].Value;
 			}
 			return _retValue;
 		}
