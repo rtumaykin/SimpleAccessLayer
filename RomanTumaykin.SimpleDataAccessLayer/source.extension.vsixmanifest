@@ -1,23 +1,23 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011" xmlns:d="http://schemas.microsoft.com/developer/vsx-schema-design/2011">
-  <Metadata>
-    <Identity Id="17a55fbc-34a2-45ed-b9f6-8ce882621048" Version="1.0.4" Language="en-US" Publisher="Roman Tumaykin" />
-    <DisplayName>Simple Data Access Layer</DisplayName>
-    <Description xml:space="preserve">Simple Data Access Layer is a Visual Studio extension package that generates enums from the database tables and classes to call stored procedures. </Description>
-    <License>License.txt</License>
-    <Icon>Resources\Package.ico</Icon>
-    <Tags>Data Access Layer,T4,Enum</Tags>
-  </Metadata>
-  <Installation InstalledByMsi="false" AllUsers="true">
-    <InstallationTarget Id="Microsoft.VisualStudio.Pro" Version="[11.0,12.0)" />
-  </Installation>
-  <Dependencies>
-    <Dependency Id="Microsoft.Framework.NDP" DisplayName="Microsoft .NET Framework" d:Source="Manual" Version="4.5" />
-    <Dependency Id="Microsoft.VisualStudio.MPF.11.0" DisplayName="Visual Studio MPF 11.0" d:Source="Installed" Version="11.0" />
-  </Dependencies>
-  <Assets>
-    <Asset Type="Microsoft.VisualStudio.VsPackage" d:Source="Project" d:ProjectName="%CurrentProject%" Path="|%CurrentProject%;PkgdefProjectOutputGroup|" />
-    <Asset Type="Microsoft.VisualStudio.ItemTemplate" d:Source="Project" d:ProjectName="%CurrentProject%.ItemTemplate" d:TargetPath="|RomanTumaykin.SimpleDataAccessLayer.ItemTemplate;TemplateProjectOutputGroup|" Path="ItemTemplates" d:VsixSubPath="ItemTemplates" />
-    <Asset Type="Microsoft.VisualStudio.Assembly" d:Source="Project" d:ProjectName="%CurrentProject%.ItemTemplate.DeploymentWizard" Path="|RomanTumaykin.SimpleDataAccessLayer.ItemTemplate.DeploymentWizard|" AssemblyName="|RomanTumaykin.SimpleDataAccessLayer.ItemTemplate.DeploymentWizard;AssemblyName|" />
-  </Assets>
+    <Metadata>
+        <Identity Id="17a55fbc-34a2-45ed-b9f6-8ce882621048" Version="1.0.5" Language="en-US" Publisher="Roman Tumaykin" />
+        <DisplayName>Simple Data Access Layer</DisplayName>
+        <Description xml:space="preserve">Simple Data Access Layer is a Visual Studio extension package that generates enums from the database tables and classes to call stored procedures. </Description>
+        <License>License.txt</License>
+        <Icon>Resources\Package.ico</Icon>
+        <Tags>Data Access Layer,T4,Enum</Tags>
+    </Metadata>
+    <Installation InstalledByMsi="false" AllUsers="true">
+        <InstallationTarget Id="Microsoft.VisualStudio.Pro" Version="[11.0,12.0)" />
+    </Installation>
+    <Dependencies>
+        <Dependency Id="Microsoft.Framework.NDP" DisplayName="Microsoft .NET Framework" d:Source="Manual" Version="4.5" />
+        <Dependency Id="Microsoft.VisualStudio.MPF.11.0" DisplayName="Visual Studio MPF 11.0" d:Source="Installed" Version="11.0" />
+    </Dependencies>
+    <Assets>
+        <Asset Type="Microsoft.VisualStudio.VsPackage" d:Source="Project" d:ProjectName="%CurrentProject%" Path="|%CurrentProject%;PkgdefProjectOutputGroup|" />
+        <Asset Type="Microsoft.VisualStudio.ItemTemplate" d:Source="Project" d:ProjectName="%CurrentProject%.ItemTemplate" d:TargetPath="|RomanTumaykin.SimpleDataAccessLayer.ItemTemplate;TemplateProjectOutputGroup|" Path="ItemTemplates" d:VsixSubPath="ItemTemplates" />
+        <Asset Type="Microsoft.VisualStudio.Assembly" d:Source="Project" d:ProjectName="%CurrentProject%.ItemTemplate.DeploymentWizard" Path="|RomanTumaykin.SimpleDataAccessLayer.ItemTemplate.DeploymentWizard|" AssemblyName="|RomanTumaykin.SimpleDataAccessLayer.ItemTemplate.DeploymentWizard;AssemblyName|" />
+    </Assets>
 </PackageManifest>
