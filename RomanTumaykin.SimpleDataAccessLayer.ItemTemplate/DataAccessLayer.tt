@@ -46,6 +46,7 @@ namespace <#= _helper.Config.Namespace #>
 		public ExecutionScope()
 		{
 			this.connection = new global::System.Data.SqlClient.SqlConnection(ConnectionString);
+			this.connection.Open();
 			this.transaction = connection.BeginTransaction();
 		}
 
@@ -58,14 +59,10 @@ namespace <#= _helper.Config.Namespace #>
 		public void Rollback()
 		{
 			if (this.transaction != null)
-			{
 				this.transaction.Rollback();
-			}
 		}
 		public void Dispose()
 		{
-			this.Rollback();
-
 			if (this.transaction != null)
 			{
 				this.transaction.Dispose();
@@ -267,6 +264,8 @@ namespace <#= _helper.Config.Namespace + ".Executables." + _currentNamespace #>
 						using (global::System.Data.SqlClient.SqlCommand _cmd = _conn.CreateCommand())
 						{
 							_cmd.CommandType = global::System.Data.CommandType.StoredProcedure;
+							if (executionScope != null && executionScope.Transaction != null)
+								_cmd.Transaction = executionScope.Transaction;
 							_cmd.CommandText = "<#= Tools.QuoteName(_procedure.Schema) + "." + Tools.QuoteName(_procedure.ProcedureName) #>";
 <#
 					foreach (var _param in parameterCollection)
