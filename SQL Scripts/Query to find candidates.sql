@@ -178,7 +178,3 @@ FROM (
 			AND [col].[column_id] = ic.[column_id]
 WHERE [CountPerTable] = 1;
 
-
-
--- ToDo: the query thinks that Identity is linked to IdentityProvider, however because it has 2 parents, Identity should be excluded
--- I think that the query does something wrong with sorting
