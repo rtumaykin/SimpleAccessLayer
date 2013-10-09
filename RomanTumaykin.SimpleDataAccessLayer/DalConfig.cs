@@ -76,6 +76,23 @@ namespace RomanTumaykin.SimpleDataAccessLayer
 		[DataMember(IsRequired = true)]
 		public string Alias { get; set; }
 	}
+	[DataContract(Namespace = "RomanTumaykin.SimpleDataAcessLayer", Name = "Constant")]
+	public class Constant
+	{
+        [DataMember(IsRequired = true)]
+        public string Schema { get; set; }
+        [DataMember(IsRequired = true)]
+        public string TableName { get; set; }
+        [DataMember(IsRequired = true)]
+        public string KeyColumn { get; set; }
+        [DataMember(IsRequired = true)]
+        public string ValueColumn { get; set; }
+        [DataMember(IsRequired = true)]
+        public string Alias { get; set; }
+        [DataMember(IsRequired = true)]
+        public bool IsStandalone { get; set; }
+	}
+
 	[DataContract(Namespace = "RomanTumaykin.SimpleDataAcessLayer", Name = "Procedure")]
 	public class Procedure
 	{
@@ -93,7 +110,9 @@ namespace RomanTumaykin.SimpleDataAccessLayer
 	[KnownType(typeof(DesignerConnection))]
 	[KnownType(typeof(WindowsAuthentication))]
 	[KnownType(typeof(SqlAuthentication))]
-	public class DalConfig
+	[KnownType(typeof(Constant))]
+    [KnownType(typeof(Procedure))]
+    public class DalConfig
 	{
 		[DataMember(IsRequired = true)]
 		public DesignerConnection DesignerConnection { get; set; }
@@ -107,5 +126,15 @@ namespace RomanTumaykin.SimpleDataAccessLayer
 		[XmlElement("Procedures")]
 		[DataMember(IsRequired = true)]
 		public List<Procedure> Procedures { get; set; }
+        [XmlElement("Constants")]
+        [DataMember(IsRequired = true)]
+        public List<Constant> Constants { get; set; }
+
+        public DalConfig()
+        {
+            this.Constants = new List<Constant>();
+            this.Procedures = new List<Procedure>();
+            this.Enums = new List<Enum>();
+        }
 	}
 }

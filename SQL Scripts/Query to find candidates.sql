@@ -132,14 +132,11 @@ WITH Candidates AS (
 	) ch
 	WHERE [RowsPerIndex] = 1
 )
-SELECT  [TableName],
-        [TableId],
-        [PK_IndexId],
-        [Parent_TableName],
+SELECT  [TableId],
+		OBJECT_SCHEMA_NAME([TableId]) AS [SchemaName],
+		OBJECT_NAME([TableId]) AS [TableName],
         [Parent_TableId],
-        [Parent_PK_IndexId],
-		[col].[column_id] AS Value_ColumnId,
-		[col].[name] AS Value_ColumnName,
+        [col].[name] AS Value_ColumnName,
 		CONVERT(xml, (
 			SELECT 
 				_c.[column_id] AS ColumnId,
@@ -156,10 +153,8 @@ SELECT  [TableName],
 			FOR XML PATH('Column'), ROOT ('KeyColumns'), ELEMENTS
 		)) AS KeyColumnsXml
 FROM (
-	SELECT  OBJECT_NAME(c.[TableId]) AS [TableName],
-			c.[TableId],
+	SELECT  c.[TableId],
 			c.[PK_IndexId],
-			OBJECT_NAME(c.[Parent_TableId]) AS [Parent_TableName],
 			c.[Parent_TableId],
 			c.[Parent_PK_IndexId],
 			COUNT(*) OVER (PARTITION BY [TableId]) AS CountPerTable
