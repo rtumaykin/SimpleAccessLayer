@@ -156,15 +156,17 @@ namespace RomanTumaykin.SimpleDataAccessLayer
 				// this was a check box
 				if (constantsGrid.Columns[e.ColumnIndex].Name == "Generate")
 				{
-					// if it was set to true, then need to make sure all columns are selected
-					if ((bool)_row.Cells[e.ColumnIndex].Value)
+					if ((bool) _row.Cells["Generate"].Value)
 					{
-						SetDefaultsForDropDownCells(_row);
+						((Table) _row.Tag).IncludedExplicitly = true;
+						EnableColumns(_row, true);
 					}
 					else
 					{
-						// remove all data from the row
-						_row.Cells["KeyColumn"].Value = _row.Cells["Alias"].Value = "";
+						if (!((Table)_row.Tag).IncludedAsParentOfSelectedChild)
+							EnableColumns(_row, false);
+
+						((Table)_row.Tag).IncludedExplicitly = false;
 					}
 				}
 				else
@@ -524,16 +526,21 @@ namespace RomanTumaykin.SimpleDataAccessLayer
 			{
 				var _gridCell = _cell as DataGridViewCell;
 
-				var _cellHeader = (string)_gridCell.OwningColumn.HeaderText;
-				if (!("Generate SourceTableName".Split(new[] { ' ' }).Contains(_cellHeader)))
+				var _cellHeaderIndex = _gridCell.ColumnIndex;
+				if (!(new[] {1, 4}).Contains(_cellHeaderIndex))
 				{
-					_gridCell.ReadOnly = enable;
-					if (_cellHeader == "KeyColumn")
+					_gridCell.ReadOnly = !enable;
+					if (_cellHeaderIndex == 1)
 					{
 						_gridCell.Value = "";
 					}
 				}
+				else if (_cellHeaderIndex == 0)
+				{
+					_gridCell.ReadOnly = true;
+				}
 				_gridCell.Style.BackColor = enable ? Color.White : Color.Silver;
+				_gridCell.Style.ForeColor = enable ? Color.Black : Color.DimGray;
 			}
 		}
 
@@ -542,6 +549,15 @@ namespace RomanTumaykin.SimpleDataAccessLayer
 			if (name == null)
 				return null;
 			return ("[" + name.Replace("]", "]]") + "]");
+		}
+
+		private void constantsGrid_CurrentCellDirtyStateChanged(object sender, EventArgs e)
+		{
+			//http://msdn.microsoft.com/en-us/library/system.windows.forms.datagridview.cellvaluechanged.aspx
+			if (constantsGrid.IsCurrentCellDirty && constantsGrid.CurrentCell is DataGridViewCheckBoxCell)
+			{
+				constantsGrid.CommitEdit(DataGridViewDataErrorContexts.Commit);
+			}
 		}
 	}
 }
