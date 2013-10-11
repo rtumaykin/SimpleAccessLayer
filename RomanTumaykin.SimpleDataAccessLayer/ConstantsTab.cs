@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Data;
+using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Runtime.Serialization;
@@ -30,36 +31,32 @@ namespace RomanTumaykin.SimpleDataAccessLayer
 			internal IList<string> KeyColumnNames { get; set; }
 			internal int? ParentTableId { get; set; }
 			internal string Alias { get; set; }
+			internal short Level { get; set; }
+			internal bool IncludedAsParentOfSelectedChild { get; set; }
+			internal bool IncludedExplicitly { get; set; }
 		}
 		
-		private bool _isLoading;
-		private bool _isRowUpdating;
-		private string _currentConnectionString;
-		private DalConfig _dalConfig;
+		private bool isLoading;
+		private bool isRowUpdating;
+		private string currentConnectionString;
+		private DalConfig dalConfig;
 		private readonly Dictionary<string, Constant> configConstantsCollection = new Dictionary<string, Constant>();
-		private Dictionary<int, Table> _tables; 
 
 		internal List<Constant> SelectedConstants
 		{
 			get
 			{
-				List<Constant> constants = new List<Constant>();
-				foreach (DataGridViewRow row in constantsGrid.Rows)
-				{
-					if ((bool)row.Cells["Generate"].Value)
-					{
-						constants.Add(new Constant()
+				return (from DataGridViewRow _row in constantsGrid.Rows
+						where ((Table) _row.Tag).IncludedAsParentOfSelectedChild || ((Table) _row.Tag).IncludedExplicitly
+						select new Constant
 							{
-								Schema = (String)row.Cells["Schema"].Value,
-								TableName = (String)row.Cells["TableName"].Value,
-								KeyColumn = (String)row.Cells["KeyColumn"].Value,
-								ValueColumn = (String)row.Cells["ValueColumn"].Value,
-								Alias = (String)row.Cells["Alias"].Value
-							});
-					}
-				}
-
-				return constants;
+								// Tag should always exist and should always be a Table type
+								Schema = ((Table) _row.Tag).Schema, 
+								TableName = ((Table) _row.Tag).TableName, 
+								KeyColumn = (String) _row.Cells["KeyColumn"].Value, 
+								ValueColumn = ((Table) _row.Tag).ValueColumn, 
+								Alias = (String) _row.Cells["Alias"].Value
+							}).ToList();
 			}
 		}
 
@@ -78,11 +75,10 @@ namespace RomanTumaykin.SimpleDataAccessLayer
 
 		public ConstantsTab()
 		{
-			_isLoading = false;
-			_isRowUpdating = false;
-			_currentConnectionString = "";
-			_dalConfig = null;
-			_tables = new Dictionary<int, Table>();
+			isLoading = false;
+			isRowUpdating = false;
+			currentConnectionString = "";
+			dalConfig = null;
 
 			InitializeComponent();
 
@@ -91,39 +87,39 @@ namespace RomanTumaykin.SimpleDataAccessLayer
 
 		internal void SetStaticData (DalConfig dalConfig)
 		{
-			this._dalConfig = dalConfig;
+			this.dalConfig = dalConfig;
 			PrepareConfigConstantsCollection();
 		}
 
 		private void PrepareConfigConstantsCollection()
 		{
-			foreach (Constant constant in _dalConfig.Constants)
+			foreach (Constant _constant in dalConfig.Constants)
 			{
-				configConstantsCollection.Add(QuoteName(constant.Schema) + "." + QuoteName(constant.TableName), constant);
+				configConstantsCollection.Add(QuoteName(_constant.Schema) + "." + QuoteName(_constant.TableName), _constant);
 			}
 		}
 
 		internal void UpdateData(string connectionString)
 		{
-			bool reloadRequired = false;
+			bool _reloadRequired = false;
 
-			if (String.IsNullOrWhiteSpace(this._currentConnectionString))
+			if (String.IsNullOrWhiteSpace(this.currentConnectionString))
 			{
-				reloadRequired = true;
+				_reloadRequired = true;
 			}
 			else
 			{
 				SqlConnectionStringBuilder _sb = new SqlConnectionStringBuilder(connectionString);
-				SqlConnectionStringBuilder _currentSb = new SqlConnectionStringBuilder(this._currentConnectionString);
+				SqlConnectionStringBuilder _currentSb = new SqlConnectionStringBuilder(this.currentConnectionString);
 				if (!(_sb.DataSource == _currentSb.DataSource && _sb.InitialCatalog == _currentSb.InitialCatalog))
 				{
-					reloadRequired = true;
+					_reloadRequired = true;
 				}
 			}
 
-			_currentConnectionString = connectionString;
+			currentConnectionString = connectionString;
 
-			if (reloadRequired)
+			if (_reloadRequired)
 			{
 				PopulateConstantsGrid();
 			}
@@ -131,7 +127,7 @@ namespace RomanTumaykin.SimpleDataAccessLayer
 
 		private void WireUpEventHandlers()
 		{
-			this.constantsGrid.CellValueChanged += ConstantsGrid_CellValueChanged;
+			constantsGrid.CellValueChanged += ConstantsGrid_CellValueChanged;
 			VisibleChanged += SetNextButtonState;
 		}
 
@@ -144,49 +140,47 @@ namespace RomanTumaykin.SimpleDataAccessLayer
 		void ConstantsGrid_CellValueChanged(object sender, DataGridViewCellEventArgs e)
 		{
 			// this is happening within the same thread
-			if (_isLoading)
+			if (isLoading)
 				return;
 
 			// This row is already updating 
-			if (_isRowUpdating)
+			if (isRowUpdating)
 				return;
 
 			// if none of the above let's start row updating;
-			_isRowUpdating = true;
+			isRowUpdating = true;
 			try
 			{
-				DataGridViewRow row = constantsGrid.Rows[e.RowIndex];
+				DataGridViewRow _row = constantsGrid.Rows[e.RowIndex];
 
 				// this was a check box
 				if (constantsGrid.Columns[e.ColumnIndex].Name == "Generate")
 				{
 					// if it was set to true, then need to make sure all columns are selected
-					if ((bool)((DataGridViewCheckBoxCell)(row.Cells[e.ColumnIndex])).Value)
+					if ((bool)_row.Cells[e.ColumnIndex].Value)
 					{
-						SetDefaultsForDropDownCells(row);
+						SetDefaultsForDropDownCells(_row);
 					}
 					else
 					{
 						// remove all data from the row
-						row.Cells["KeyColumn"].Value = row.Cells["ValueColumn"].Value = row.Cells["Alias"].Value = "";
+						_row.Cells["KeyColumn"].Value = _row.Cells["Alias"].Value = "";
 					}
 				}
 				else
 				{
-					// Generate is already checked - do nothing
-					if (((DataGridViewCheckBoxCell)(row.Cells["Generate"])).Value == null || (bool)((DataGridViewCheckBoxCell)(row.Cells["Generate"])).Value)
-						return;
-					else
+					// if Generate is already checked - do nothing
+					if (_row.Cells["Generate"].Value != null && !((bool) _row.Cells["Generate"].Value))
 					{
-						SetDefaultsForDropDownCells(row);
+						SetDefaultsForDropDownCells(_row);
 
-						((DataGridViewCheckBoxCell)(row.Cells["Generate"])).Value = true;
+						_row.Cells["Generate"].Value = true;
 					}
 				}
 			}
 			finally
 			{
-				_isRowUpdating = false;
+				isRowUpdating = false;
 			}
 		}
 
@@ -201,7 +195,7 @@ namespace RomanTumaykin.SimpleDataAccessLayer
 
 		private void PopulateConstantsGrid()
 		{
-			String _query = @"
+			const string _query = @"
 				WITH Candidates AS (
 					-- this gets the first seed set of rows
 					-- only rows with single column primary keys are included
@@ -209,7 +203,8 @@ namespace RomanTumaykin.SimpleDataAccessLayer
 						[i].[object_id] AS [TableId],
 						[i].[index_id] AS [PK_IndexId],
 						NULL AS [Parent_TableId],
-						NULL AS [Parent_PK_IndexId]
+						NULL AS [Parent_PK_IndexId],
+						0 AS [Level]
 					FROM [sys].[indexes] i
 						INNER JOIN [sys].[index_columns] ic
 							ON	[ic].[object_id] = [i].[object_id]
@@ -247,7 +242,8 @@ namespace RomanTumaykin.SimpleDataAccessLayer
 					SELECT  [TableId],
 							[PK_IndexId],
 							[Parent_TableId],
-							[Parent_PK_IndexId]
+							[Parent_PK_IndexId],
+							[Level] + 1 AS [Level]
 					FROM (
 						SELECT 
 							OBJECT_NAME(c.[object_id]) AS [TableName],
@@ -256,11 +252,13 @@ namespace RomanTumaykin.SimpleDataAccessLayer
 							i.[index_id] AS [PK_IndexId],
 							[p].[TableId] AS [Parent_TableId],
 							[p].[PK_IndexId] AS [Parent_PK_IndexId],
-							COUNT(*) OVER (PARTITION BY c.[object_id]) AS RowsPerIndex
+							COUNT(*) OVER (PARTITION BY c.[object_id]) AS RowsPerIndex,
+							MAX(p.[Level]) OVER (PARTITION BY 1) AS [Level]
 						FROM (
 								SELECT 
 									c.[TableId],
 									c.[PK_IndexId],	
+									c.[Level],
 									CONVERT(varbinary(MAX), 
 										(
 											SELECT CONVERT(varchar(max), CONVERT(binary(4), [column_id]), 2)
@@ -355,12 +353,14 @@ namespace RomanTumaykin.SimpleDataAccessLayer
 								AND _c.[system_type_id] IN (167, 175, 231, 239)
 								AND _ic.[column_id] IS NULL
 							FOR XML PATH('Column'), ROOT ('KeyColumns'), ELEMENTS
-						)) AS KeyColumnsXml
+						)) AS KeyColumnsXml,
+						[c].[Level]
 				FROM (
 					SELECT  c.[TableId],
 							c.[PK_IndexId],
 							c.[Parent_TableId],
 							c.[Parent_PK_IndexId],
+							c.[Level],
 							COUNT(*) OVER (PARTITION BY [TableId]) AS CountPerTable
 					FROM [Candidates] c
 				) c
@@ -375,79 +375,115 @@ namespace RomanTumaykin.SimpleDataAccessLayer
 					INNER JOIN [sys].[columns] col
 						ON	[col].[object_id] = c.[TableId]
 							AND [col].[column_id] = ic.[column_id]
-				WHERE [CountPerTable] = 1;";
+				WHERE [CountPerTable] = 1
+				ORDER BY [c].[Level] ASC;
 
-			using (var conn = new SqlConnection(_currentConnectionString))
+";
+
+			using (var _conn = new SqlConnection(currentConnectionString))
 			{
-				conn.Open();
-				using (SqlCommand cmd = conn.CreateCommand())
+				_conn.Open();
+				using (SqlCommand _cmd = _conn.CreateCommand())
 				{
-					cmd.CommandType = CommandType.StoredProcedure;
-					cmd.CommandText = "sys.sp_executesql";
-					cmd.Parameters.AddWithValue("@stmt", _query);
+					_cmd.CommandType = CommandType.StoredProcedure;
+					_cmd.CommandText = "sys.sp_executesql";
+					_cmd.Parameters.AddWithValue("@stmt", _query);
 
-					using (SqlDataReader reader = cmd.ExecuteReader())
+					using (SqlDataReader _reader = _cmd.ExecuteReader())
 					{
 						// since this happens only when connection server and database changes, I can wipe old items
 						this.constantsGrid.Rows.Clear();
 
-						this._isLoading = true;
+						this.isLoading = true;
 						try
 						{
-							while (reader.Read())
+							while (_reader.Read())
 							{
-								AddRow(reader.GetFieldValue<int>(0), reader.GetFieldValue<string>(1),
-									   reader.GetFieldValue<string>(2), reader.GetFieldValue<string>(4),
-									   reader.GetFieldValue<string>(5),
-									   reader.IsDBNull(3) ? (int?) null : reader.GetFieldValue<int>(3));
+								AddRow(_reader.GetFieldValue<int>(0), _reader.GetFieldValue<string>(1),
+									   _reader.GetFieldValue<string>(2), _reader.GetFieldValue<string>(4),
+									   _reader.GetFieldValue<string>(5),
+									   _reader.IsDBNull(3) ? (int?) null : _reader.GetFieldValue<int>(3),
+									   _reader.GetFieldValue<int>(6));
 							}
-						}
-						catch (Exception e)
+						}/*
+						catch (Exception _e)
 						{
 							throw;
 						}
+						  */
 						finally
 						{
-							this._isLoading = false;
+							this.isLoading = false;
 						}
 					}
 				}
 			}
 		}
 
-		private void AddRow(int tableId, string schemaName, string tableName, string valueColumn, string keyColumnsXml, int? parentTableId)
+		private void AddRow(int tableId, string schemaName, string tableName, string valueColumn, string keyColumnsXml, int? parentTableId, int level)
 		{
 			// Add row to the dictionary of tables 
 
-			var keysDataSet = new DataSet();
-			keysDataSet.ReadXml(new StringReader(keyColumnsXml));
-			var columns = (from DataRow dataRow in keysDataSet.Tables["Column"].Rows select (String)dataRow["ColumnName"]).ToList();
+			var _keysDataSet = new DataSet();
+			_keysDataSet.ReadXml(new StringReader(keyColumnsXml));
+			var _columns = (from DataRow _dataRow in _keysDataSet.Tables["Column"].Rows select (String)_dataRow["ColumnName"]).ToList();
 
-			var table = new Table()
+			var _table = new Table
 				{
 					TableId = tableId,
 					Schema = schemaName,
 					TableName = tableName,
 					ValueColumn = valueColumn,
-					KeyColumnNames = columns,
+					KeyColumnNames = _columns,
 					ParentTableId = parentTableId,
-					Alias = ""
+					Alias = "",
+					Level = (short)level,
+					IncludedExplicitly = false,
+					IncludedAsParentOfSelectedChild = false
 				};
 
-			_tables.Add(tableId, table);
+			// The records come back in a sorted way 
+			int _offset = level * 8;
+
+//			string _parentTableName = parentTableId.HasValue ? (tables[parentTableId.Value].ParentTableId.HasValue ? "- " : "") + QuoteName(tables[parentTableId.Value].Schema) + "." + QuoteName(tables[parentTableId.Value].TableName) : "";
 
 			// Create new row and get the cell templates
-			DataGridViewRow _row = this.constantsGrid.Rows[this.constantsGrid.Rows.Add()];
+			DataGridViewRow _row;
+
+			if (parentTableId.HasValue)
+			{
+				var _index =
+					(
+						from DataGridViewRow _constantRow in this.constantsGrid.Rows
+						where ((Table) _constantRow.Tag).TableId == parentTableId
+						select _constantRow.Index + 1
+					).FirstOrDefault();
+
+				this.constantsGrid.Rows.Insert(_index, 1);
+
+				_row = this.constantsGrid.Rows[_index];
+			}
+			else
+			{
+				_row = this.constantsGrid.Rows[this.constantsGrid.Rows.Add()];
+			}
+			
+			// Associate additional info with the row
+			_row.Tag = _table;
+
 			DataGridViewTextBoxCell _sourceTableNameCell = (DataGridViewTextBoxCell)_row.Cells["SourceTableName"];
 			DataGridViewComboBoxCell _keysCell = (DataGridViewComboBoxCell)_row.Cells["KeyColumn"];
 			DataGridViewTextBoxCell _valuesCell = (DataGridViewTextBoxCell)_row.Cells["ValueColumn"];
 			DataGridViewTextBoxCell _alias = (DataGridViewTextBoxCell)_row.Cells["Alias"];
 			DataGridViewCheckBoxCell _generate = (DataGridViewCheckBoxCell)_row.Cells["Generate"];
 
-			_sourceTableNameCell.Value = QuoteName(schemaName) + "." + QuoteName(tableName);
-			foreach (var column in columns)
+			var _currentCellPadding = _sourceTableNameCell.Style.Padding;
+			_sourceTableNameCell.Style.Padding = new Padding(_offset, _currentCellPadding.Top, _currentCellPadding.Right, _currentCellPadding.Bottom);
+
+			_sourceTableNameCell.Value = (parentTableId == null ? "" : "- ") + QuoteName(schemaName) + "." + QuoteName(tableName);
+			foreach (var _column in _columns)
 			{
-				_keysCell.Items.Add(column);
+				_keysCell.Items.Add(_column);
 			}
 		   
 			_valuesCell.Value = valueColumn;
@@ -457,11 +493,47 @@ namespace RomanTumaykin.SimpleDataAccessLayer
 			_alias.Value = _isConstantInConfig ? configConstantsCollection[_quotedName].Alias : "";
 			_generate.Value = _isConstantInConfig;
 
-			table.Alias = (string)_alias.Value;
+			_table.Alias = (string)_alias.Value;
+
+			EnableColumns(_row, _isConstantInConfig);
 
 			if (_isConstantInConfig)
 			{
 				_keysCell.Value = configConstantsCollection[_quotedName].KeyColumn;
+
+				// Sync table value
+				((Table) _row.Tag).IncludedExplicitly = true;
+
+				var _walkRow = _row;
+				while (((Table)_walkRow.Tag).ParentTableId.HasValue)
+				{
+					_walkRow = (from DataGridViewRow _constantRow in this.constantsGrid.Rows
+					            where ((Table) _constantRow.Tag).TableId == ((Table)_walkRow.Tag).ParentTableId.Value
+					            select _constantRow
+					           ).FirstOrDefault();
+					((Table)_walkRow.Tag).IncludedAsParentOfSelectedChild = true;
+
+					EnableColumns(_walkRow, true);
+				}
+			}
+		}
+
+		private void EnableColumns(DataGridViewRow walkRow, bool enable)
+		{
+			foreach (var _cell in walkRow.Cells)
+			{
+				var _gridCell = _cell as DataGridViewCell;
+
+				var _cellHeader = (string)_gridCell.OwningColumn.HeaderText;
+				if (!("Generate SourceTableName".Split(new[] { ' ' }).Contains(_cellHeader)))
+				{
+					_gridCell.ReadOnly = enable;
+					if (_cellHeader == "KeyColumn")
+					{
+						_gridCell.Value = "";
+					}
+				}
+				_gridCell.Style.BackColor = enable ? Color.White : Color.Silver;
 			}
 		}
 
@@ -469,8 +541,7 @@ namespace RomanTumaykin.SimpleDataAccessLayer
 		{
 			if (name == null)
 				return null;
-			else
-				return ("[" + name.Replace("]", "]]") + "]");
+			return ("[" + name.Replace("]", "]]") + "]");
 		}
 	}
 }

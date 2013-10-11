@@ -5,7 +5,8 @@ WITH Candidates AS (
 		[i].[object_id] AS [TableId],
 		[i].[index_id] AS [PK_IndexId],
 		NULL AS [Parent_TableId],
-		NULL AS [Parent_PK_IndexId]
+		NULL AS [Parent_PK_IndexId],
+		0 AS [Level]
 	FROM [sys].[indexes] i
 		INNER JOIN [sys].[index_columns] ic
 			ON	[ic].[object_id] = [i].[object_id]
@@ -43,7 +44,8 @@ WITH Candidates AS (
 	SELECT  [TableId],
 			[PK_IndexId],
 			[Parent_TableId],
-			[Parent_PK_IndexId]
+			[Parent_PK_IndexId],
+			[Level] + 1 AS [Level]
 	FROM (
 		SELECT 
 			OBJECT_NAME(c.[object_id]) AS [TableName],
@@ -52,11 +54,13 @@ WITH Candidates AS (
 			i.[index_id] AS [PK_IndexId],
 			[p].[TableId] AS [Parent_TableId],
 			[p].[PK_IndexId] AS [Parent_PK_IndexId],
-			COUNT(*) OVER (PARTITION BY c.[object_id]) AS RowsPerIndex
+			COUNT(*) OVER (PARTITION BY c.[object_id]) AS RowsPerIndex,
+			MAX(p.[Level]) OVER (PARTITION BY 1) AS [Level]
 		FROM (
 				SELECT 
 					c.[TableId],
 					c.[PK_IndexId],	
+					c.[Level],
 					CONVERT(varbinary(MAX), 
 						(
 							SELECT CONVERT(varchar(max), CONVERT(binary(4), [column_id]), 2)
@@ -151,12 +155,14 @@ SELECT  [TableId],
 				AND _c.[system_type_id] IN (167, 175, 231, 239)
 				AND _ic.[column_id] IS NULL
 			FOR XML PATH('Column'), ROOT ('KeyColumns'), ELEMENTS
-		)) AS KeyColumnsXml
+		)) AS KeyColumnsXml,
+		[c].[Level]
 FROM (
 	SELECT  c.[TableId],
 			c.[PK_IndexId],
 			c.[Parent_TableId],
 			c.[Parent_PK_IndexId],
+			c.[Level],
 			COUNT(*) OVER (PARTITION BY [TableId]) AS CountPerTable
 	FROM [Candidates] c
 ) c
@@ -171,5 +177,6 @@ FROM (
 	INNER JOIN [sys].[columns] col
 		ON	[col].[object_id] = c.[TableId]
 			AND [col].[column_id] = ic.[column_id]
-WHERE [CountPerTable] = 1;
+WHERE [CountPerTable] = 1
+ORDER BY c.[Level] ASC;
 

@@ -31,6 +31,7 @@
             this.constantsGrid = new System.Windows.Forms.DataGridView();
             this.dataGridViewTextBoxColumn1 = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.dataGridViewTextBoxColumn2 = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.dataGridViewTextBoxColumn3 = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.SourceTableName = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.KeyColumn = new System.Windows.Forms.DataGridViewComboBoxColumn();
             this.ValueColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
@@ -75,6 +76,13 @@
             this.dataGridViewTextBoxColumn2.ReadOnly = true;
             this.dataGridViewTextBoxColumn2.Width = 165;
             // 
+            // dataGridViewTextBoxColumn3
+            // 
+            this.dataGridViewTextBoxColumn3.HeaderText = "Alias";
+            this.dataGridViewTextBoxColumn3.Name = "dataGridViewTextBoxColumn3";
+            this.dataGridViewTextBoxColumn3.ReadOnly = true;
+            this.dataGridViewTextBoxColumn3.Width = 166;
+            // 
             // SourceTableName
             // 
             this.SourceTableName.FillWeight = 150F;
@@ -106,7 +114,6 @@
             // 
             this.Generate.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
             this.Generate.FillWeight = 50F;
-            this.Generate.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.Generate.HeaderText = "Generate";
             this.Generate.Name = "Generate";
             // 
@@ -132,6 +139,7 @@
         private System.Windows.Forms.DataGridViewTextBoxColumn ValueColumn;
         private System.Windows.Forms.DataGridViewTextBoxColumn Alias;
         private System.Windows.Forms.DataGridViewCheckBoxColumn Generate;
+        private System.Windows.Forms.DataGridViewTextBoxColumn dataGridViewTextBoxColumn3;
 
     }
 }
