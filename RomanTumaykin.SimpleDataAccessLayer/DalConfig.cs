@@ -90,7 +90,7 @@ namespace RomanTumaykin.SimpleDataAccessLayer
         [DataMember(IsRequired = true)]
         public string Alias { get; set; }
         [DataMember(IsRequired = true)]
-        public bool IsStandalone { get; set; }
+        public bool IsExplicitlySelected { get; set; }
 	}
 
 	[DataContract(Namespace = "RomanTumaykin.SimpleDataAcessLayer", Name = "Procedure")]

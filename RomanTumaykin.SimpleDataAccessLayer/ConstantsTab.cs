@@ -34,6 +34,11 @@ namespace RomanTumaykin.SimpleDataAccessLayer
 			internal short Level { get; set; }
 			internal bool IncludedAsParentOfSelectedChild { get; set; }
 			internal bool IncludedExplicitly { get; set; }
+			internal IList<int> ChildTables { get; set; } 
+			internal Table()
+			{
+				ChildTables = new List<int>();
+			}
 		}
 		
 		private bool isLoading;
@@ -55,7 +60,8 @@ namespace RomanTumaykin.SimpleDataAccessLayer
 								TableName = ((Table) _row.Tag).TableName, 
 								KeyColumn = (String) _row.Cells["KeyColumn"].Value, 
 								ValueColumn = ((Table) _row.Tag).ValueColumn, 
-								Alias = (String) _row.Cells["Alias"].Value
+								Alias = (String) _row.Cells["Alias"].Value,
+								IsExplicitlySelected = ((Table)_row.Tag).IncludedExplicitly
 							}).ToList();
 			}
 		}
@@ -159,24 +165,14 @@ namespace RomanTumaykin.SimpleDataAccessLayer
 					if ((bool) _row.Cells["Generate"].Value)
 					{
 						((Table) _row.Tag).IncludedExplicitly = true;
-						EnableColumns(_row, true);
+						EnableColumns(_row, true, _row);
 					}
 					else
 					{
 						if (!((Table)_row.Tag).IncludedAsParentOfSelectedChild)
-							EnableColumns(_row, false);
+							EnableColumns(_row, false, _row);
 
 						((Table)_row.Tag).IncludedExplicitly = false;
-					}
-				}
-				else
-				{
-					// if Generate is already checked - do nothing
-					if (_row.Cells["Generate"].Value != null && !((bool) _row.Cells["Generate"].Value))
-					{
-						SetDefaultsForDropDownCells(_row);
-
-						_row.Cells["Generate"].Value = true;
 					}
 				}
 			}
@@ -447,8 +443,6 @@ namespace RomanTumaykin.SimpleDataAccessLayer
 			// The records come back in a sorted way 
 			int _offset = level * 8;
 
-//			string _parentTableName = parentTableId.HasValue ? (tables[parentTableId.Value].ParentTableId.HasValue ? "- " : "") + QuoteName(tables[parentTableId.Value].Schema) + "." + QuoteName(tables[parentTableId.Value].TableName) : "";
-
 			// Create new row and get the cell templates
 			DataGridViewRow _row;
 
@@ -493,54 +487,119 @@ namespace RomanTumaykin.SimpleDataAccessLayer
 			string _quotedName = QuoteName(schemaName) + "." + QuoteName(tableName);
 			bool _isConstantInConfig = configConstantsCollection.ContainsKey(_quotedName);
 			_alias.Value = _isConstantInConfig ? configConstantsCollection[_quotedName].Alias : "";
-			_generate.Value = _isConstantInConfig;
+			_generate.Value = _isConstantInConfig && configConstantsCollection[_quotedName].IsExplicitlySelected;
 
 			_table.Alias = (string)_alias.Value;
 
-			EnableColumns(_row, _isConstantInConfig);
+			// only run enable on explicitly enabled rows and on the disabled rows too :)
+			if ((bool) _generate.Value || !_isConstantInConfig)
+				EnableColumns(_row, _isConstantInConfig, _row);
 
-			if (_isConstantInConfig)
-			{
-				_keysCell.Value = configConstantsCollection[_quotedName].KeyColumn;
-
-				// Sync table value
-				((Table) _row.Tag).IncludedExplicitly = true;
-
-				var _walkRow = _row;
-				while (((Table)_walkRow.Tag).ParentTableId.HasValue)
-				{
-					_walkRow = (from DataGridViewRow _constantRow in this.constantsGrid.Rows
-					            where ((Table) _constantRow.Tag).TableId == ((Table)_walkRow.Tag).ParentTableId.Value
-					            select _constantRow
-					           ).FirstOrDefault();
-					((Table)_walkRow.Tag).IncludedAsParentOfSelectedChild = true;
-
-					EnableColumns(_walkRow, true);
-				}
-			}
 		}
 
-		private void EnableColumns(DataGridViewRow walkRow, bool enable)
+		private void EnableColumns(DataGridViewRow row, bool enable, DataGridViewRow rootRow)
 		{
-			foreach (var _cell in walkRow.Cells)
+			// recursive part
+
+			var _rowData = (Table) row.Tag;
+			var _rootRowData = (Table) rootRow.Tag;
+
+			if (_rowData.TableId == _rootRowData.TableId)
+			{
+				// If the current row and the root row are the same then the Explicit Included value is the same as the enable value
+				_rowData.IncludedExplicitly = enable;
+			}
+			else
+			{
+				if (enable)
+				{
+					_rowData.IncludedAsParentOfSelectedChild = true;
+					if (!_rowData.ChildTables.Contains(_rootRowData.TableId))
+						_rowData.ChildTables.Add(_rootRowData.TableId);
+				}
+				else
+				{
+					// to avoid any mistakes
+					while (_rowData.ChildTables.Contains(_rootRowData.TableId))
+						_rowData.ChildTables.Remove(_rootRowData.TableId);
+
+					if (_rowData.ChildTables.Count == 0)
+						_rowData.IncludedAsParentOfSelectedChild = false;
+				}
+			}
+
+			// if both flags are false - then disable, else enable
+			bool _ultimateEnable = _rowData.IncludedAsParentOfSelectedChild || _rowData.IncludedExplicitly;
+
+			// apply style to imitate disabled/enabled look
+			foreach (var _cell in row.Cells)
 			{
 				var _gridCell = _cell as DataGridViewCell;
+				_gridCell.Style.BackColor = _ultimateEnable ? Color.White : Color.Silver;
+				_gridCell.Style.ForeColor = _ultimateEnable ? Color.Black : Color.DimGray;
 
-				var _cellHeaderIndex = _gridCell.ColumnIndex;
-				if (!(new[] {1, 4}).Contains(_cellHeaderIndex))
+				switch (_gridCell.OwningColumn.Name)
 				{
-					_gridCell.ReadOnly = !enable;
-					if (_cellHeaderIndex == 1)
-					{
-						_gridCell.Value = "";
-					}
+					case "KeyColumn":
+						_gridCell.ReadOnly = !_ultimateEnable;
+						if (!_ultimateEnable)
+						{
+							_gridCell.Value = "";
+						}
+						else
+						{
+							if (String.IsNullOrEmpty(_gridCell.Value as string))
+							{
+								// First see if this table is in the saved config
+								string _quotedName = QuoteName(_rowData.Schema) + "." + QuoteName(_rowData.TableName);
+								if (configConstantsCollection.ContainsKey(_quotedName))
+								{
+									var _constant = configConstantsCollection[_quotedName];
+									_gridCell.Value = _constant.KeyColumn;
+								}
+								else // if not then fall back to the first column name
+								{
+									_gridCell.Value = _rowData.KeyColumnNames[0];
+								}
+
+							}
+
+						}
+						break;
+
+					case "Alias":
+						_gridCell.ReadOnly = !_ultimateEnable;
+						if (!_ultimateEnable)
+						{
+							_gridCell.Value = "";
+						}
+						else
+						{
+							if (String.IsNullOrEmpty(_gridCell.Value as string))
+							{
+								// First see if this table is in the saved config
+								string _quotedName = QuoteName(_rowData.Schema) + "." + QuoteName(_rowData.TableName);
+								if (configConstantsCollection.ContainsKey(_quotedName))
+								{
+									var _constant = configConstantsCollection[_quotedName];
+									_gridCell.Value = _constant.Alias;
+								}
+							}
+
+						}
+						break;
+
 				}
-				else if (_cellHeaderIndex == 0)
-				{
-					_gridCell.ReadOnly = true;
-				}
-				_gridCell.Style.BackColor = enable ? Color.White : Color.Silver;
-				_gridCell.Style.ForeColor = enable ? Color.Black : Color.DimGray;
+			}
+
+			if (_rowData.ParentTableId.HasValue)
+			{
+				var _parentRow = (from DataGridViewRow _constantRow in this.constantsGrid.Rows
+								  where ((Table)_constantRow.Tag).TableId == _rowData.ParentTableId.Value
+								  select _constantRow
+							).FirstOrDefault();
+				
+				EnableColumns(_parentRow, enable, rootRow);
 			}
 		}
 
