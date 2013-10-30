@@ -88,7 +88,7 @@ namespace RomanTumaykin.SimpleDataAccessLayer
 			designerInformationTab.SetStaticData(this.config);
 			enumsTab.SetStaticData(this.config);
 			proceduresTab.SetStaticData(this.config);
-            constantsTab.SetStaticData(this.config);
+			constantsTab.SetStaticData(this.config);
 		}
 
 		private void WireUpEventHandlers()
@@ -100,7 +100,7 @@ namespace RomanTumaykin.SimpleDataAccessLayer
 			databaseSelectionTab.CanContinueChanged += OnCanContinue;
 			enumsTab.CanContinueChanged += OnCanContinue;
 			proceduresTab.CanContinueChanged += OnCanContinue;
-		    constantsTab.CanContinueChanged += OnCanContinue;
+			constantsTab.CanContinueChanged += OnCanContinue;
 		}
 
 		private void OnCanContinue(object o, CanContinueEventArgs e)
@@ -141,23 +141,23 @@ namespace RomanTumaykin.SimpleDataAccessLayer
 						UpdateProceduresData();
 						break;
 
-                    case "Constants":
-                        UpdateConstantsData();
-                        break;
+					case "Constants":
+						UpdateConstantsData();
+						break;
 
-                }
+				}
 			}
 
 			this.currentTabControlIndex = tabContainer.SelectedIndex;
 			finishButton.Enabled = tabContainer.SelectedIndex == tabContainer.TabCount - 1;
 		}
 
-	    private void UpdateConstantsData()
-	    {
-	        constantsTab.UpdateData(GetDesignerConnectionString());
-	    }
+		private void UpdateConstantsData()
+		{
+			constantsTab.UpdateData(GetDesignerConnectionString());
+		}
 
-	    private void UpdateProceduresData()
+		private void UpdateProceduresData()
 		{
 			proceduresTab.UpdateData(GetDesignerConnectionString());
 		}
@@ -276,7 +276,7 @@ namespace RomanTumaykin.SimpleDataAccessLayer
 				Namespace = designerInformationTab.Namespace,
 				Enums = enumsTab.SelectedEnums,
 				Procedures = proceduresTab.SelectedProcedures,
-                Constants = constantsTab.SelectedConstants
+				Constants = constantsTab.SelectedConstants
 			};
 
 			this.config = _config;

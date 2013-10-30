@@ -345,5 +345,9 @@ namespace RomanTumaykin.SimpleDataAccessLayer
 			}
 			return _retValue;
 		}
+
+		public IList<ConstantData> GetConstantDataCollection () 
+			// Need to save the hierarchy to the dal config as well so I don't have to rediscover it again here.
+			// Also that hierarchy may be passed here because that is how the data needs to be presented.
 	}
 }

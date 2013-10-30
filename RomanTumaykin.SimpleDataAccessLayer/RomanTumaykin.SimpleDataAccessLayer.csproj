@@ -163,6 +163,7 @@
     <Compile Include="ApplicationConnectionTab.Designer.cs">
       <DependentUpon>ApplicationConnectionTab.cs</DependentUpon>
     </Compile>
+    <Compile Include="CodeGen\ConstantData.cs" />
     <Compile Include="ConstantsTab.cs">
       <SubType>UserControl</SubType>
     </Compile>
